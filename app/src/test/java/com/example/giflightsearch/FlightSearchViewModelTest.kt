@@ -22,14 +22,39 @@ class FlightSearchViewModelTest {
         viewModel.updateSearchQuery("LAX")
         assertEquals("LAX", viewModel.uiState.value.searchQuery)
     }
+
+    @Test
+    fun `search returns valid airport`() = runTest {
+        val viewModel = FlightSearchViewModel(FakeFlightRepository())
+        viewModel.updateSearchQuery("LAX")
+        val airportList = viewModel.uiState.value.airportList
+        assertEquals(1, airportList.size)
+        assertEquals("LAX", airportList.first().iataCode)
+    }
 }
 
 class FakeFlightRepository : FlightRepository {
-    override fun getAllAirports(): Flow<List<Airport>> = flowOf(emptyList())
+    private val testAirports = listOf(
+        Airport(id = 1, iataCode = "JFK", name = "John F. Kennedy International Airport", passengers = 1000),
+        Airport(id = 2, iataCode = "LAX", name = "Los Angeles International Airport", passengers = 2000),
+        Airport(id = 3, iataCode = "ORD", name = "O'Hare International Airport", passengers = 3000)
+    )
 
-    override fun getAirportByCode(code: String): Flow<Airport> = flowOf(Airport(0, code, "", 0))
 
-    override fun searchAirports(query: String): Flow<List<Airport>> = flowOf(listOf(Airport(0, query, "", 0)))
+    override fun getAllAirports(): Flow<List<Airport>> = flowOf(testAirports)
+
+    override fun getAirportByCode(code: String): Flow<Airport> {
+        return flowOf(testAirports.first { it.iataCode == code })
+    }
+
+    override fun searchAirports(query: String): Flow<List<Airport>> {
+        return flowOf(
+            testAirports.filter {
+                it.iataCode.contains(query, ignoreCase = true) ||
+                it.name.contains(query, ignoreCase = true)
+            }
+        )
+    }
 
     override fun getAllFavorites(): Flow<List<Favorite>> = flowOf(emptyList())
 
