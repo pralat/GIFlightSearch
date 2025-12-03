@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 
@@ -30,6 +31,14 @@ class FlightSearchViewModelTest {
         val airportList = viewModel.uiState.value.airportList
         assertEquals(1, airportList.size)
         assertEquals("LAX", airportList.first().iataCode)
+    }
+
+    @Test
+    fun `search for non-existent airport returns empty list`() = runTest {
+        val viewModel = FlightSearchViewModel(FakeFlightRepository())
+        viewModel.updateSearchQuery("L8R")
+        val airportList = viewModel.uiState.value.airportList
+        assertTrue(airportList.isEmpty())
     }
 }
 
