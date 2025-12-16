@@ -1,8 +1,11 @@
 package com.example.giflightsearch
 
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
 import com.example.giflightsearch.data.Airport
 import com.example.giflightsearch.data.Favorite
 import com.example.giflightsearch.data.FlightRepository
+import com.example.giflightsearch.data.UserPreferencesRepository
 import com.example.giflightsearch.ui.FlightSearchViewModel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
@@ -11,6 +14,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
+import org.mockito.Mockito.mock
 
 class FlightSearchViewModelTest {
 
@@ -19,14 +23,14 @@ class FlightSearchViewModelTest {
 
     @Test
     fun `updateSearchQuery updates uiState`() = runTest {
-        val viewModel = FlightSearchViewModel(FakeFlightRepository())
+        val viewModel = FlightSearchViewModel(FakeFlightRepository(), FakeUserPreferencesRepository())
         viewModel.updateSearchQuery("LAX")
         assertEquals("LAX", viewModel.uiState.value.searchQuery)
     }
 
     @Test
     fun `search returns valid airport`() = runTest {
-        val viewModel = FlightSearchViewModel(FakeFlightRepository())
+        val viewModel = FlightSearchViewModel(FakeFlightRepository(), FakeUserPreferencesRepository())
         viewModel.updateSearchQuery("LAX")
         val airportList = viewModel.uiState.value.airportList
         assertEquals(1, airportList.size)
@@ -35,10 +39,18 @@ class FlightSearchViewModelTest {
 
     @Test
     fun `search for non-existent airport returns empty list`() = runTest {
-        val viewModel = FlightSearchViewModel(FakeFlightRepository())
+        val viewModel = FlightSearchViewModel(FakeFlightRepository(), FakeUserPreferencesRepository())
         viewModel.updateSearchQuery("L8R")
         val airportList = viewModel.uiState.value.airportList
         assertTrue(airportList.isEmpty())
+    }
+
+    @Test
+    fun `updateSearchQuery saves to preferences`() = runTest {
+        val fakeUserPreferencesRepository = FakeUserPreferencesRepository()
+        val viewModel = FlightSearchViewModel(FakeFlightRepository(), fakeUserPreferencesRepository)
+        viewModel.updateSearchQuery("LAX")
+        assertEquals("LAX", fakeUserPreferencesRepository.savedSearchQuery)
     }
 }
 
@@ -72,4 +84,17 @@ class FakeFlightRepository : FlightRepository {
     override suspend fun deleteFavorite(favorite: Favorite) {}
 
     override fun getFavorite(departureCode: String, destinationCode: String): Flow<Favorite?> = flowOf(null)
+}
+
+open class FakeUserPreferencesRepository(
+    private val initialSearchQuery: String = ""
+) : UserPreferencesRepository(mock(DataStore::class.java) as DataStore<Preferences>) {
+    var savedSearchQuery: String? = null
+        private set
+
+    override val searchQuery: Flow<String> = flowOf(initialSearchQuery)
+
+    override suspend fun saveSearchQuery(searchQuery: String) {
+        savedSearchQuery = searchQuery
+    }
 }
