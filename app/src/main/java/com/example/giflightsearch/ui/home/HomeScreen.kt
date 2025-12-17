@@ -14,32 +14,27 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.giflightsearch.data.Airport
-import com.example.giflightsearch.ui.FlightSearchViewModel
 
 @Composable
 fun HomeScreen(
     modifier: Modifier = Modifier,
-    viewModel: FlightSearchViewModel = viewModel(factory = FlightSearchViewModel.factory),
-    onAirportSelected: (Airport) -> Unit,
+    searchQuery: String,
+    airportList: List<Airport>,
+    onQueryChange: (String) -> Unit,
+    onAirportClick: (Airport) -> Unit
 ) {
-    val uiState by viewModel.uiState.collectAsState()
-    val searchQuery = uiState.searchQuery
-
     Column(modifier = modifier) {
         SearchBar(
             query = searchQuery,
-            onQueryChange = { viewModel.updateSearchQuery(it) },
+            onQueryChange = onQueryChange,
             modifier = Modifier.padding(16.dp)
         )
         AirportList(
-            airports = uiState.airportList,
-            onAirportClick = onAirportSelected
+            airports = airportList,
+            onAirportClick = onAirportClick
         )
     }
 }

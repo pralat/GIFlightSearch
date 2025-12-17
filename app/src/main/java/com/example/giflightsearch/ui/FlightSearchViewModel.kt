@@ -14,64 +14,80 @@ import com.example.giflightsearch.ui.home.HomeUiState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 class FlightSearchViewModel(private val flightRepository: FlightRepository) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(HomeUiState())
-    val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
-
     private val _searchQuery = MutableStateFlow("")
+    private val _selectedAirport = MutableStateFlow<Airport?>(null)
 
-    private val airportList: StateFlow<List<Airport>> = _searchQuery
-        .flatMapLatest { query ->
-            if (query.isBlank()) {
-                flightRepository.getAllAirports()
-            } else {
+    private val _favoriteList: StateFlow<List<Favorite>> = flightRepository.getAllFavorites()
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000),
+            initialValue = emptyList()
+        )
+
+    private val _airportList: StateFlow<List<Airport>> =
+        _searchQuery.flatMapLatest { query ->
+            if (query.isNotBlank()) {
                 flightRepository.searchAirports(query)
+            } else {
+                flowOf(emptyList())
             }
-        }
-        .stateIn(
+        }.stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5_000),
             initialValue = emptyList()
         )
 
-    private val favoriteList: StateFlow<List<Favorite>> = flightRepository.getAllFavorites()
-        .stateIn(
+    private val _destinationList: StateFlow<List<Airport>> = 
+        _selectedAirport.flatMapLatest { selected ->
+            if (selected != null) {
+                flightRepository.getAllAirports().map { airports ->
+                    airports.filter { it.id != selected.id }
+                }
+            } else {
+                flowOf(emptyList())
+            }
+        }.stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5_000),
             initialValue = emptyList()
         )
 
-    init {
-        viewModelScope.launch {
-            combine(
-                _searchQuery,
-                airportList,
-                favoriteList,
-            ) { query, airports, favorites ->
-                HomeUiState(
-                    searchQuery = query,
-                    airportList = airports,
-                    favoriteList = favorites
-                )
-            }.collect {
-                _uiState.value = it
-            }
-        }
-    }
+    val uiState: StateFlow<HomeUiState> = combine(
+        _searchQuery,
+        _selectedAirport,
+        _airportList,
+        _destinationList,
+        _favoriteList
+    ) { query, selected, airports, destinations, favorites ->
+        HomeUiState(
+            searchQuery = query,
+            selectedAirport = selected,
+            airportList = if (selected == null) airports else destinations,
+            favoriteList = favorites
+        )
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5_000),
+        initialValue = HomeUiState()
+    )
+
 
     fun updateSearchQuery(query: String) {
         _searchQuery.value = query
+        _selectedAirport.value = null
     }
 
     fun onAirportSelected(airport: Airport) {
-        _uiState.value = _uiState.value.copy(selectedAirport = airport)
+        _selectedAirport.value = airport
     }
 
     fun addFavorite(favorite: Favorite) {

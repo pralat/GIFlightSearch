@@ -14,31 +14,26 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.giflightsearch.data.Airport
 import com.example.giflightsearch.data.Favorite
-import com.example.giflightsearch.ui.FlightSearchViewModel
 
 @Composable
 fun FlightsScreen(
     modifier: Modifier = Modifier,
-    viewModel: FlightSearchViewModel = viewModel(factory = FlightSearchViewModel.factory),
-    departureAirport: Airport
+    departureAirport: Airport,
+    destinationList: List<Airport>,
+    favoriteList: List<Favorite>,
+    onFavoriteClick: (String, String) -> Unit
 ) {
-    val uiState by viewModel.uiState.collectAsState()
-    val destinationList = uiState.airportList.filter { it.iataCode != departureAirport.iataCode }
-
     LazyColumn(
         modifier = modifier,
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
     ) {
         items(destinationList) { destination ->
-            val isFavorite = uiState.favoriteList.any {
+            val isFavorite = favoriteList.any {
                 it.departureCode == departureAirport.iataCode && it.destinationCode == destination.iataCode
             }
             FlightRow(
@@ -46,15 +41,7 @@ fun FlightsScreen(
                 destination = destination,
                 isFavorite = isFavorite,
                 onFavoriteClick = {
-                    val favorite = Favorite(
-                        departureCode = departureAirport.iataCode,
-                        destinationCode = destination.iataCode
-                    )
-                    if (isFavorite) {
-                        viewModel.removeFavorite(favorite)
-                    } else {
-                        viewModel.addFavorite(favorite)
-                    }
+                    onFavoriteClick(departureAirport.iataCode, destination.iataCode)
                 }
             )
         }

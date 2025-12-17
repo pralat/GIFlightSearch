@@ -19,6 +19,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.example.giflightsearch.data.Favorite
 import com.example.giflightsearch.ui.FlightSearchViewModel
 import com.example.giflightsearch.ui.flights.FlightsScreen
 import com.example.giflightsearch.ui.home.HomeScreen
@@ -48,16 +49,31 @@ fun FlightSearchApp(
         ) {
             composable("home") {
                 HomeScreen(
-                    onAirportSelected = {
+                    searchQuery = uiState.searchQuery,
+                    airportList = uiState.airportList,
+                    onQueryChange = viewModel::updateSearchQuery,
+                    onAirportClick = {
                         viewModel.onAirportSelected(it)
                         navController.navigate("flights")
                     }
                 )
             }
             composable("flights") {
-                uiState.selectedAirport?.let {
+                uiState.selectedAirport?.let { departureAirport ->
                     FlightsScreen(
-                        departureAirport = it
+                        departureAirport = departureAirport,
+                        destinationList = uiState.airportList,
+                        favoriteList = uiState.favoriteList,
+                        onFavoriteClick = { departureCode, destinationCode ->
+                            val favorite = uiState.favoriteList.find {
+                                it.departureCode == departureCode && it.destinationCode == destinationCode
+                            }
+                            if (favorite != null) {
+                                viewModel.removeFavorite(favorite)
+                            } else {
+                                viewModel.addFavorite(Favorite(departureCode = departureCode, destinationCode = destinationCode))
+                            }
+                        }
                     )
                 }
             }
@@ -66,8 +82,7 @@ fun FlightSearchApp(
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun FlightSearchTopAppBar(
+@Composable fun FlightSearchTopAppBar(
     title: String,
     canNavigateBack: Boolean,
     navigateUp: () -> Unit,
