@@ -50,7 +50,7 @@ fun FlightSearchApp(
             composable("home") {
                 HomeScreen(
                     searchQuery = uiState.searchQuery,
-                    airportList = uiState.airportList,
+                    airportList = uiState.searchResultList,
                     onQueryChange = viewModel::updateSearchQuery,
                     onAirportClick = {
                         viewModel.onAirportSelected(it)
@@ -62,7 +62,7 @@ fun FlightSearchApp(
                 uiState.selectedAirport?.let { departureAirport ->
                     FlightsScreen(
                         departureAirport = departureAirport,
-                        destinationList = uiState.airportList,
+                        destinationList = uiState.destinationList,
                         favoriteList = uiState.favoriteList,
                         onFavoriteClick = { departureCode, destinationCode ->
                             val favorite = uiState.favoriteList.find {
@@ -82,7 +82,8 @@ fun FlightSearchApp(
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
-@Composable fun FlightSearchTopAppBar(
+@Composable
+fun FlightSearchTopAppBar(
     title: String,
     canNavigateBack: Boolean,
     navigateUp: () -> Unit,

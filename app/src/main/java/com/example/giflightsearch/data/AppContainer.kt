@@ -7,6 +7,7 @@ import android.content.Context
  */
 interface AppContainer {
     val flightRepository: FlightRepository
+    val userPreferencesRepository: UserPreferencesRepository
 }
 
 /**
@@ -21,5 +22,12 @@ class AppDataContainer(private val context: Context) : AppContainer {
             FlightSearchDatabase.getDatabase(context).airportDao(),
             FlightSearchDatabase.getDatabase(context).favoriteDao()
         )
+    }
+
+    /**
+     * Implementation for [UserPreferencesRepository]
+     */
+    override val userPreferencesRepository: UserPreferencesRepository by lazy {
+        UserPreferencesRepository(context)
     }
 }

@@ -10,21 +10,32 @@ import com.example.giflightsearch.FlightSearchApplication
 import com.example.giflightsearch.data.Airport
 import com.example.giflightsearch.data.Favorite
 import com.example.giflightsearch.data.FlightRepository
+import com.example.giflightsearch.data.UserPreferencesRepository
 import com.example.giflightsearch.ui.home.HomeUiState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-class FlightSearchViewModel(private val flightRepository: FlightRepository) : ViewModel() {
+class FlightSearchViewModel(
+    private val flightRepository: FlightRepository,
+    private val userPreferencesRepository: UserPreferencesRepository
+) : ViewModel() {
 
     private val _searchQuery = MutableStateFlow("")
     private val _selectedAirport = MutableStateFlow<Airport?>(null)
+
+    init {
+        viewModelScope.launch {
+            _searchQuery.value = userPreferencesRepository.searchQuery.first()
+        }
+    }
 
     private val _favoriteList: StateFlow<List<Favorite>> = flightRepository.getAllFavorites()
         .stateIn(
@@ -33,7 +44,7 @@ class FlightSearchViewModel(private val flightRepository: FlightRepository) : Vi
             initialValue = emptyList()
         )
 
-    private val _airportList: StateFlow<List<Airport>> =
+    private val _searchResultList: StateFlow<List<Airport>> =
         _searchQuery.flatMapLatest { query ->
             if (query.isNotBlank()) {
                 flightRepository.searchAirports(query)
@@ -64,14 +75,15 @@ class FlightSearchViewModel(private val flightRepository: FlightRepository) : Vi
     val uiState: StateFlow<HomeUiState> = combine(
         _searchQuery,
         _selectedAirport,
-        _airportList,
+        _searchResultList,
         _destinationList,
         _favoriteList
-    ) { query, selected, airports, destinations, favorites ->
+    ) { query, selected, searchResults, destinations, favorites ->
         HomeUiState(
             searchQuery = query,
             selectedAirport = selected,
-            airportList = if (selected == null) airports else destinations,
+            searchResultList = searchResults,
+            destinationList = destinations,
             favoriteList = favorites
         )
     }.stateIn(
@@ -83,7 +95,9 @@ class FlightSearchViewModel(private val flightRepository: FlightRepository) : Vi
 
     fun updateSearchQuery(query: String) {
         _searchQuery.value = query
-        _selectedAirport.value = null
+        viewModelScope.launch {
+            userPreferencesRepository.saveSearchQuery(query)
+        }
     }
 
     fun onAirportSelected(airport: Airport) {
@@ -106,7 +120,10 @@ class FlightSearchViewModel(private val flightRepository: FlightRepository) : Vi
         val factory: ViewModelProvider.Factory = viewModelFactory {
             initializer {
                 val application = (this[APPLICATION_KEY] as FlightSearchApplication)
-                FlightSearchViewModel(application.container.flightRepository)
+                FlightSearchViewModel(
+                    application.container.flightRepository,
+                    application.container.userPreferencesRepository
+                )
             }
         }
     }

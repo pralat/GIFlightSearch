@@ -56,6 +56,7 @@ dependencies {
     implementation("androidx.navigation:navigation-compose:2.9.6")
     implementation("androidx.room:room-runtime:2.8.4")
     implementation("androidx.room:room-ktx:2.8.4")
+    implementation("androidx.datastore:datastore-preferences:1.1.1")
     ksp("androidx.room:room-compiler:2.8.4")
     testImplementation(libs.junit)
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2")
