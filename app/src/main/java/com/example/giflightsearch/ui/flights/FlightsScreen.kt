@@ -10,12 +10,14 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.example.giflightsearch.data.Airport
 import com.example.giflightsearch.data.Favorite
@@ -71,8 +73,9 @@ fun FlightRow(
         }
         IconButton(onClick = onFavoriteClick) {
             Icon(
-                imageVector = Icons.Default.Star, 
-                contentDescription = if (isFavorite) "Remove from favorites" else "Add to favorites"
+                imageVector = if (isFavorite) Icons.Filled.Star else Icons.Filled.StarBorder,
+                contentDescription = if (isFavorite) "Remove from favorites" else "Add to favorites",
+                tint = if (isFavorite) Color.Red else Color.Gray
             )
         }
     }
