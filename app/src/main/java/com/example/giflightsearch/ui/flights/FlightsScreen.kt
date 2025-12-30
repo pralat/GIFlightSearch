@@ -65,7 +65,7 @@ fun FlightRow(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Column {
+        Column(modifier = Modifier.weight(1f)) {
             Text("DEPARTURE")
             Text("${departure.iataCode} ${departure.name}")
             Text("DESTINATION")
