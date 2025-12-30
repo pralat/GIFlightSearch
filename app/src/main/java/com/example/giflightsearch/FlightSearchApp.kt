@@ -51,10 +51,19 @@ fun FlightSearchApp(
                 HomeScreen(
                     searchQuery = uiState.searchQuery,
                     airportList = uiState.searchResultList,
+                    favoriteFlights = uiState.favoriteFlights,
                     onQueryChange = viewModel::updateSearchQuery,
                     onAirportClick = {
                         viewModel.onAirportSelected(it)
                         navController.navigate("flights")
+                    },
+                    onFavoriteClick = { departureCode, destinationCode ->
+                        val favorite = uiState.favoriteList.find {
+                            it.departureCode == departureCode && it.destinationCode == destinationCode
+                        }
+                        if (favorite != null) {
+                            viewModel.removeFavorite(favorite)
+                        }
                     }
                 )
             }

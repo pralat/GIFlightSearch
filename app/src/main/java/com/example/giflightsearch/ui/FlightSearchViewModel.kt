@@ -11,7 +11,9 @@ import com.example.giflightsearch.data.Airport
 import com.example.giflightsearch.data.Favorite
 import com.example.giflightsearch.data.FlightRepository
 import com.example.giflightsearch.data.UserPreferencesRepository
+import com.example.giflightsearch.ui.home.FavoriteFlight
 import com.example.giflightsearch.ui.home.HomeUiState
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -57,7 +59,7 @@ class FlightSearchViewModel(
             initialValue = emptyList()
         )
 
-    private val _destinationList: StateFlow<List<Airport>> = 
+    private val _destinationList: StateFlow<List<Airport>> =
         _selectedAirport.flatMapLatest { selected ->
             if (selected != null) {
                 flightRepository.getAllAirports().map { airports ->
@@ -71,6 +73,27 @@ class FlightSearchViewModel(
             started = SharingStarted.WhileSubscribed(5_000),
             initialValue = emptyList()
         )
+
+    private val _favoriteFlights: Flow<List<FavoriteFlight>> =
+        flightRepository.getAllFavorites().flatMapLatest { favorites ->
+            val departureAirportFlows = favorites.map { flightRepository.getAirportByCode(it.departureCode) }
+            val destinationAirportFlows = favorites.map { flightRepository.getAirportByCode(it.destinationCode) }
+
+            if (departureAirportFlows.isEmpty() || destinationAirportFlows.isEmpty()) {
+                flowOf(emptyList())
+            } else {
+                combine(departureAirportFlows) { departureAirports ->
+                    combine(destinationAirportFlows) { destinationAirports ->
+                        departureAirports.zip(destinationAirports).map { (departure, destination) ->
+                            FavoriteFlight(
+                                departureAirport = departure,
+                                destinationAirport = destination
+                            )
+                        }
+                    }
+                }.flatMapLatest { it }
+            }
+        }
 
     val uiState: StateFlow<HomeUiState> = combine(
         _searchQuery,
@@ -86,6 +109,12 @@ class FlightSearchViewModel(
             destinationList = destinations,
             favoriteList = favorites
         )
+    }.combine(_favoriteFlights.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5_000),
+        initialValue = emptyList()
+    )) { partialState, favoriteFlights ->
+        partialState.copy(favoriteFlights = favoriteFlights)
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5_000),
