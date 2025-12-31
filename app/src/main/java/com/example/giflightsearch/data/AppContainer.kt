@@ -28,6 +28,6 @@ class AppDataContainer(private val context: Context) : AppContainer {
      * Implementation for [UserPreferencesRepository]
      */
     override val userPreferencesRepository: UserPreferencesRepository by lazy {
-        UserPreferencesRepository(context)
+        DataStoreUserPreferencesRepository(context)
     }
 }

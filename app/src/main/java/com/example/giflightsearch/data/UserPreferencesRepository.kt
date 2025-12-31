@@ -9,21 +9,26 @@ import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
+interface UserPreferencesRepository {
+    val searchQuery: Flow<String>
+    suspend fun saveSearchQuery(searchQuery: String)
+}
+
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(
     name = "user_preferences"
 )
 
-class UserPreferencesRepository(
+class DataStoreUserPreferencesRepository(
     private val context: Context
-) {
+) : UserPreferencesRepository {
     private val searchQueryKey = stringPreferencesKey("search_query")
 
-    val searchQuery: Flow<String> = context.dataStore.data
+    override val searchQuery: Flow<String> = context.dataStore.data
         .map {
             it[searchQueryKey] ?: ""
         }
 
-    suspend fun saveSearchQuery(searchQuery: String) {
+    override suspend fun saveSearchQuery(searchQuery: String) {
         context.dataStore.edit {
             it[searchQueryKey] = searchQuery
         }

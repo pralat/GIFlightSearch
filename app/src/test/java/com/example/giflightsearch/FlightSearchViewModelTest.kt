@@ -3,8 +3,11 @@ package com.example.giflightsearch
 import com.example.giflightsearch.data.Airport
 import com.example.giflightsearch.data.Favorite
 import com.example.giflightsearch.data.FlightRepository
+import com.example.giflightsearch.data.UserPreferencesRepository
 import com.example.giflightsearch.ui.FlightSearchViewModel
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -18,27 +21,31 @@ class FlightSearchViewModelTest {
     val mainDispatcherRule = MainDispatcherRule()
 
     @Test
-    fun `updateSearchQuery updates uiState`() = runTest {
-        val viewModel = FlightSearchViewModel(FakeFlightRepository())
+    fun `updateSearchQuery() updates uiState`() = runTest {
+        val viewModel = FlightSearchViewModel(FakeFlightRepository(), FakeUserPreferencesRepository())
         viewModel.updateSearchQuery("LAX")
-        assertEquals("LAX", viewModel.uiState.value.searchQuery)
+        val uiState = viewModel.uiState.first()
+        assertEquals("LAX", uiState.searchQuery)
     }
 
     @Test
     fun `search returns valid airport`() = runTest {
-        val viewModel = FlightSearchViewModel(FakeFlightRepository())
+        val viewModel = FlightSearchViewModel(FakeFlightRepository(), FakeUserPreferencesRepository())
         viewModel.updateSearchQuery("LAX")
-        val airportList = viewModel.uiState.value.airportList
+        // Wait for the state to be updated with search results
+        val uiState = viewModel.uiState.first { it.searchResultList.isNotEmpty() }
+        val airportList = uiState.searchResultList
         assertEquals(1, airportList.size)
         assertEquals("LAX", airportList.first().iataCode)
     }
 
     @Test
     fun `search for non-existent airport returns empty list`() = runTest {
-        val viewModel = FlightSearchViewModel(FakeFlightRepository())
+        val viewModel = FlightSearchViewModel(FakeFlightRepository(), FakeUserPreferencesRepository())
         viewModel.updateSearchQuery("L8R")
-        val airportList = viewModel.uiState.value.airportList
-        assertTrue(airportList.isEmpty())
+        // Wait for the search to complete
+        val newUiState = viewModel.uiState.first { it.searchQuery == "L8R" }
+        assertTrue(newUiState.searchResultList.isEmpty())
     }
 }
 
@@ -72,4 +79,13 @@ class FakeFlightRepository : FlightRepository {
     override suspend fun deleteFavorite(favorite: Favorite) {}
 
     override fun getFavorite(departureCode: String, destinationCode: String): Flow<Favorite?> = flowOf(null)
+}
+
+class FakeUserPreferencesRepository : UserPreferencesRepository {
+    private val _searchQuery = MutableStateFlow("")
+    override val searchQuery: Flow<String> = _searchQuery
+
+    override suspend fun saveSearchQuery(searchQuery: String) {
+        _searchQuery.value = searchQuery
+    }
 }
